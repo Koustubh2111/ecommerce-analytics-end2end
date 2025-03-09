@@ -1,29 +1,47 @@
-version: '3.7'
+version: '3.8'
 
 services:
-  # Zookeeper service for Kafka
+  #Metadata and config management for kafka
   zookeeper:
-    image: wurstmeister/zookeeper:3.4.6
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zookeeper
+    container_name: zookeeper
     ports:
       - "2181:2181"
-    networks:
-      - my-network
-
-  # Kafka service
-  kafka:
-    image: wurstmeister/kafka:latest
     environment:
-      KAFKA_ADVERTISED_LISTENERS: INSIDE_KAFKA:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
-      KAFKA_LISTENERS: INSIDE_KAFKA:9093
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka
     ports:
-      - "9093:9093"
+      - "9092:9092"
+      - "9999:9999" # JMX port for monitoring
+    environment:
+      KAFKA_BROKER_ID: 1 #Broker id, using only one broker
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 #Specifies way of connecting to zookeeper
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:9092 #Ways of connecting to Kafka, kafka: for internal docker connection, localhost for external
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_JMX_PORT: 9999
+      KAFKA_SCHEMA_REGISTRY_URL: "http://schema-registry:8081" # location of schema registry
     depends_on:
       - zookeeper
-    networks:
-      - my-network
 
-networks:
-  my-network:
-    driver: bridge
+  schema-registry:
+    #Data (JSON) schema validation, versioning and monitoring 
+    image: confluentinc/cp-schema-registry:latest
+    hostname: schema-registry
+    container_name: schema-registry
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+    depends_on:
+      - kafka
