@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  # Zookeeper service for Kafka
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    ports:
+      - "2181:2181"
+    networks:
+      - my-network
+
+  # Kafka service
+  kafka:
+    image: wurstmeister/kafka:latest
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE_KAFKA:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_LISTENERS: INSIDE_KAFKA:9093
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    ports:
+      - "9093:9093"
+    depends_on:
+      - zookeeper
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge
