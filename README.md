@@ -5,8 +5,6 @@ Fake user interactions and product-related events are generated to enable real-t
 
 ## Project Overview
 
-The project aims to track and analyze user behavior in an e-commerce platform. It generates various event types, including product views, add-to-cart actions, abandoned carts, purchases, and transaction details. These events are serialized using JSON schemas and sent to Kafka topics. The Schema Registry ensures data consistency and enables schema evolution.
-
 The goal is to build a foundation for:
 
 * Real-time analytics dashboards.
