@@ -1,4 +1,4 @@
-from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry import SchemaRegistryClient, Schema
 import json
 
 """
@@ -41,6 +41,9 @@ schema_registry_conf = {'url': 'http://localhost:8081'}
 schema_registry_client = SchemaRegistryClient(schema_registry_conf)
 
 subject_name = 'add-to-cart-events'
-schema_registry_client.register_schema(subject_name, schema_str, schema_type="JSON")
+
+schema = Schema(schema_str=schema_str, schema_type="JSON")
+
+schema_registry_client.register_schema(subject_name=subject_name, schema=schema)
 
 print(f"Schema registered for subject: {subject_name}")
