@@ -30,22 +30,20 @@ This document outlines the issues encountered while setting up the Kafka, Zookee
     * This ensured the Schema Registry connected directly to the Kafka broker's internal listener.
 
 
-3. # Importance of Healthchecks in Docker
+3.  **Importance of Healthchecks in Docker:**
 
-Facing a connectivity issue in your Docker environment, where the custom `register-schema` container was unable to connect to the `schema-registry` service running on port 8081. Despite using the correct hostname (`schema-registry`) and port (`8081`), the connection failed, resulting in an error message about connection refusal. This issue occurred because the `schema-registry` service was not fully initialized and ready to accept connections at the time the test was executed.
+    * **Issue:** Facing a connectivity issue in your Docker environment, where the custom `register-schema` container was unable to connect to the `schema-registry` service running on port 8081. Despite using the correct hostname (`schema-registry`) and port (`8081`), the connection failed, resulting in an error message about connection refusal. This issue occurred because the `schema-registry` service was not fully initialized and ready to accept connections at the time the test was executed.
+    * **Resolution:** Health checks provided a solution to this issue by ensuring that the `schema-registry` service was fully initialized and ready to accept connections before any dependent services (like `register-schema`) attempted to connect to it. By adding a health check to the `schema-registry` and `kafka` service, monitoring the service's health was possible. Once the `schema-registry` service was healthy and ready, Docker ensured that the `register-schema` service could connect to it without issues.
+    In a **Docker Compose** file, you can configure a health check like below:
 
-Health checks provided a solution to this issue by ensuring that the `schema-registry` service was fully initialized and ready to accept connections before any dependent services (like `register-schema`) attempted to connect to it. By adding a health check to the `schema-registry` and `kafka` service, monitoring the service's health was possible. Once the `schema-registry` service was healthy and ready, Docker ensured that the `register-schema` service could connect to it without issues.
-
-In a **Docker Compose** file, you can configure a health check like below:
-
-```yaml
-services:
-  my-service:
-    image: my-image
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      retries: 3
-      start_period: 10s
-      timeout: 5s
-```
+    ```yaml
+    services:
+      my-service:
+        image: my-image
+        healthcheck:
+          test: ["CMD", "curl", "-f", "http://localhost:8080"]
+          interval: 30s
+          retries: 3
+          start_period: 10s
+          timeout: 5s
+    ```
