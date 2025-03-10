@@ -29,9 +29,23 @@ This document outlines the issues encountered while setting up the Kafka, Zookee
 
     * This ensured the Schema Registry connected directly to the Kafka broker's internal listener.
 
-## Key Learnings
 
-* **Kafka Listener Configuration:** Pay close attention to the `KAFKA_ADVERTISED_LISTENERS` configuration to avoid port conflicts and ensure proper communication between internal and external clients.
-* **Schema Registry Connection:** Explicitly specifying the `SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS` can resolve connection issues between the Schema Registry and Kafka.
+3. # Importance of Healthchecks in Docker
 
-This document serves as a record of the troubleshooting process and can be used as a reference for future setups.
+Facing a connectivity issue in your Docker environment, where the custom `register-schema` container was unable to connect to the `schema-registry` service running on port 8081. Despite using the correct hostname (`schema-registry`) and port (`8081`), the connection failed, resulting in an error message about connection refusal. This issue occurred because the `schema-registry` service was not fully initialized and ready to accept connections at the time the test was executed.
+
+Health checks provided a solution to this issue by ensuring that the `schema-registry` service was fully initialized and ready to accept connections before any dependent services (like `register-schema`) attempted to connect to it. By adding a health check to the `schema-registry` and `kafka` service, monitoring the service's health was possible. Once the `schema-registry` service was healthy and ready, Docker ensured that the `register-schema` service could connect to it without issues.
+
+In a **Docker Compose** file, you can configure a health check like below:
+
+```yaml
+services:
+  my-service:
+    image: my-image
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 5s
+```
