@@ -44,7 +44,7 @@ schema_str = """
 }
 """
 
-schema_registry_conf = {'url': 'http://localhost:8081'}
+schema_registry_conf = {'url': 'http://schema-registry:8081'}
 schema_registry_client = SchemaRegistryClient(schema_registry_conf)
 
 subject_name = 'product-catalogue'
