@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   #Metadata and config management for kafka
@@ -22,7 +21,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1 #Broker id, using only one broker
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 #Specifies way of connecting to zookeeper
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:9092 #Ways of connecting to Kafka, kafka: for internal docker connection, localhost for external
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:9093 #Ways of connecting to Kafka, kafka: for internal docker connection, localhost for external
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -43,5 +42,6 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - kafka
