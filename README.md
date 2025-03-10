@@ -1,6 +1,6 @@
 # E-commerce Analytics Event Streaming Project
 
-This project simulates an e-commerce analytics event streaming pipeline using Kafka, Python, Schema registry and Prefect for workflopw orchestration.
+This project simulates an e-commerce analytics event streaming pipeline using Kafka, Python, Schema registry and Prefect for workflow orchestration.
 Fake user interactions and product-related events are generated to enable real-time analytics and insights.
 
 ## Project Overview
