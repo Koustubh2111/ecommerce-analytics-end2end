@@ -10,6 +10,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - project-network
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -31,6 +33,14 @@ services:
       KAFKA_SCHEMA_REGISTRY_URL: "http://schema-registry:8081" # location of schema registry
     depends_on:
       - zookeeper
+    networks:
+      - project-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
 
   schema-registry:
     #Data (JSON) schema validation, versioning and monitoring 
@@ -43,5 +53,38 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
     depends_on:
       - kafka
+    networks:
+      - project-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 30s  # Run the health check every 30 seconds
+      retries: 5     # Retry 3 times before considering the service unhealthy
+      start_period: 10s  # Wait 10 seconds before starting health checks
+      timeout: 5s  # Timeout after 5 seconds if the check is not completed
+
+  register-schema:
+    build:
+      context: ..
+      dockerfile: docker/schema_registry/Dockerfile
+    depends_on:
+      schema-registry:
+        condition: service_healthy
+    networks:
+      - project-network
+
+  producer:
+    build:
+      context: ..
+      dockerfile: docker/producers/Dockerfile
+    depends_on:
+      - kafka
+      - schema-registry
+    networks:
+      - project-network
+
+networks:
+  project-network:
+    driver: bridge 
