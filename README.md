@@ -15,27 +15,6 @@ The goal is to build a foundation for:
 ## Project Structure
 
 ```
-You are absolutely right! My apologies for the omission. Given that we are building this project with the intention of using Prefect for orchestration, it is a crucial element that should be included in the README.md.
-
-Here's an updated version that incorporates Prefect into the project description and TO DO list:
-
-Markdown
-
-# E-commerce Analytics Event Streaming Project with Prefect
-
-This project simulates an e-commerce analytics event streaming pipeline using Kafka, Python, Confluent Schema Registry, and **Prefect** for orchestration. It captures key user interactions and product-related events to enable real-time analytics and insights.
-
-## Project Overview
-
-The project aims to track and analyze user behavior in an e-commerce platform. It generates various event types, including product views, add-to-cart actions, abandoned carts, purchases, and transaction details. These events are serialized using JSON schemas and sent to Kafka topics. The Schema Registry ensures data consistency and enables schema evolution. **Prefect is used to orchestrate the data pipelines, ensuring reliable and repeatable execution.**
-
-The goal is to build a foundation for:
-
-* Real-time analytics dashboards.
-* Personalized recommendations.
-
-## Project Structure
-
 your-project/
 └── docker/
     ├── docker-compose.yml     # Docker Compose configuration for Kafka Zookeeper and Schema Registry
