@@ -4,15 +4,16 @@ from confluent_kafka import Producer
 from confluent_kafka.serialization import SerializationContext, MessageField
 import random
 import time
+from datetime import datetime
 
 
 # Schema Registry Configuration
-schema_registry_conf = {'url': 'http://localhost:8081'}
+schema_registry_conf = {'url': 'http://schema-registry:8081'}
 schema_registry_client = SchemaRegistryClient(schema_registry_conf)
 
 # Kafka Producer Configuration
 producer_conf = {
-    'bootstrap.servers': 'localhost:9092', #kafka port
+    'bootstrap.servers': 'kafka:9092', #internal connection
 }
 
 schema_str = """
@@ -60,7 +61,7 @@ def generate_add_to_cart_event():
     user_id = random.randint(1, 100)
     product_id = random.randint(101, 200)
     quantity = random.randint(1, 10)
-    timestamp = int(time.time())
+    timestamp = datetime.now().isoformat() 
     return {
             'userId': user_id, \
             'productId': product_id, \
@@ -77,7 +78,7 @@ try:
         producer.produce(topic=subject_name,
                          value=json_serializer(event, SerializationContext(subject_name, MessageField.VALUE)),
                          on_delivery=delivery_report) #call back to delivery_report sent 
-        print(f"Produced message {i}, but not yet flushed.")
+        print(f"Produced message {i+1}, but not yet flushed.")
         producer.flush()
         print(" Flushed message")
         time.sleep(1)  # Wait for 1 second between events
