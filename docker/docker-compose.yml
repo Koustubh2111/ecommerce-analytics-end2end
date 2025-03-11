@@ -25,6 +25,7 @@ services:
     container_name: kafka
     ports:
       - "9092:9092"
+      - "9093:9093" # External communication (localhost) for testing outside the docker
       - "9999:9999" # JMX port for monitoring
     environment:
       KAFKA_BROKER_ID: 1 #Broker id, using only one broker
