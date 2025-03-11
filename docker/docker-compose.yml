@@ -12,6 +12,12 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     networks:
       - project-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | /usr/bin/nc -w 2 localhost 2181 | grep imok || /bin/true"]
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -32,15 +38,16 @@ services:
       KAFKA_JMX_PORT: 9999
       KAFKA_SCHEMA_REGISTRY_URL: "http://schema-registry:8081" # location of schema registry
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     networks:
       - project-network
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      test: ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server kafka:9092 > /dev/null"]
       interval: 30s
       retries: 5
-      start_period: 10s
-      timeout: 5s
+      start_period: 30s
+      timeout: 10s
 
   schema-registry:
     #Data (JSON) schema validation, versioning and monitoring 
@@ -70,6 +77,8 @@ services:
       context: ..
       dockerfile: docker/schema_registry/Dockerfile
     depends_on:
+      kafka:
+        condition: service_healthy
       schema-registry:
         condition: service_healthy
     networks:
@@ -80,8 +89,10 @@ services:
       context: ..
       dockerfile: docker/producers/Dockerfile
     depends_on:
-      - kafka
-      - schema-registry
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
     networks:
       - project-network
 
