@@ -47,3 +47,19 @@ This document outlines the issues encountered while setting up the Kafka, Zookee
           start_period: 10s
           timeout: 5s
     ```
+
+4. Kafka Health Check Failure Due to `kafka-topics.sh` Permission Denied and Execution Issues
+  * **Issue**: The health check for Kafka failed due to a "permission denied" error when trying to execute the `kafka-topics.sh` script, and the Kafka process could not execute it due to incorrect file ownership or insufficient user permissions.
+  * **Fix**: 
+    - Implemented a more robust Kafka health check by replacing the old one:
+      ```bash
+      ["CMD", "bash", "-c", "kafka-topics.sh --list --zookeeper localhost:2181 || /bin/true"] #Old
+      ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server kafka:9092 > /dev/null"]#New
+      ```
+
+5. Zookeeper Health Check Failure Due to Missing `nc` Command
+  - **Issue**: The Zookeeper health check failed because the `nc` (netcat) command was missing in the container.
+  - **Resolution**: Replaced the missing `nc` command with a workaround to check the Zookeeper status using `bash`. Updated the health check command to:
+    ```bash
+    ["CMD", "bash", "-c", "echo 'ruok' | /usr/bin/nc -w 2 localhost 2181 | grep imok || /bin/true"]
+    ```
