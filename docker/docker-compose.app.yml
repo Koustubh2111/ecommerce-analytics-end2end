@@ -1,0 +1,28 @@
+services:
+  register-schema:
+    build:
+      context: ..
+      dockerfile: docker/schema_registry/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    networks:
+      - project-network
+
+  producer:
+    build:
+      context: ..
+      dockerfile: docker/producers/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    networks:
+      - project-network
+
+networks:
+  project-network:
+    external: true  # This tells Compose not to redefine it but to use an existing one
