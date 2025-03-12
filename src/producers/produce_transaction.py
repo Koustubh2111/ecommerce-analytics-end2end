@@ -19,29 +19,38 @@ producer_conf = {
 schema_str = """
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AddToCart",
-  "description": "Schema for add-to-cart events",
+  "title": "Transaction",
+  "description": "Schema for transaction data",
   "type": "object",
   "properties": {
+    "transactionId": {
+      "type": "integer"
+    },
     "userId": {
       "type": "integer"
     },
-    "productId": {
+    "orderId": {
       "type": "integer"
+    },
+    "paymentInfo": {
+      "type": "string"
+    },
+    "refunded": {
+      "type": "boolean"
+    },
+    "fraudSignal": {
+      "type": "boolean"
     },
     "timestamp": {
       "type": "string",
       "format": "date-time"
-    },
-    "quantity": {
-      "type": "integer"
     }
   },
-  "required": ["userId", "productId", "timestamp", "quantity"] 
+  "required": ["transactionId", "userId", "orderId", "paymentInfo", "refunded", "fraudSignal", "timestamp"]
 }
 """
 
-subject_name = 'add-to-cart-events'
+subject_name = 'transactions'
 
 #Schema serializer
 json_serializer = JSONSerializer(schema_str=schema_str, schema_registry_client=schema_registry_client)
@@ -58,14 +67,20 @@ def delivery_report(err, msg):
 
 def generate_event():
     """Generate random fake data for events"""
+    transaction_id = random.randint(1, 100)
     user_id = random.randint(1, 100)
-    product_id = random.randint(101, 200)
-    quantity = random.randint(1, 10)
+    order_id = random.randint(1,100)
+    payment_info = random.choice(["Debit", "Credit"])
+    refunded = random.choice([True, False])
+    fraud_signal = random.choice([True, False])
     timestamp = datetime.now().isoformat() 
     return {
+            'transactionId' : transaction_id, \
             'userId': user_id, \
-            'productId': product_id, \
-            'quantity': quantity, \
+            'orderId' : order_id, \
+            'paymentInfo' : payment_info, \
+            'refunded' : refunded, \
+            'fraudSignal' : fraud_signal, \
             'timestamp': timestamp
            }
 

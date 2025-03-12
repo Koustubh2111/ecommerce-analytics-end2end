@@ -19,8 +19,8 @@ producer_conf = {
 schema_str = """
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AddToCart",
-  "description": "Schema for add-to-cart events",
+  "title": "AbandonedCart",
+  "description": "Schema for abandoned cart events",
   "type": "object",
   "properties": {
     "userId": {
@@ -32,16 +32,14 @@ schema_str = """
     "timestamp": {
       "type": "string",
       "format": "date-time"
-    },
-    "quantity": {
-      "type": "integer"
     }
   },
-  "required": ["userId", "productId", "timestamp", "quantity"] 
+  "required": ["userId", "productId", "timestamp"]
 }
+
 """
 
-subject_name = 'add-to-cart-events'
+subject_name = 'abandon-cart'
 
 #Schema serializer
 json_serializer = JSONSerializer(schema_str=schema_str, schema_registry_client=schema_registry_client)
@@ -60,12 +58,10 @@ def generate_event():
     """Generate random fake data for events"""
     user_id = random.randint(1, 100)
     product_id = random.randint(101, 200)
-    quantity = random.randint(1, 10)
     timestamp = datetime.now().isoformat() 
     return {
             'userId': user_id, \
             'productId': product_id, \
-            'quantity': quantity, \
             'timestamp': timestamp
            }
 
