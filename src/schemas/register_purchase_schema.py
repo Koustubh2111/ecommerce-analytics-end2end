@@ -22,7 +22,7 @@ schema_str = """
       "type": "integer"
     },
     "orderId": {
-      "type": "string"
+      "type": "integer"
     },
     "productId": {
       "type": "integer"

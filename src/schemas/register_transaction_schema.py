@@ -20,13 +20,13 @@ schema_str = """
   "type": "object",
   "properties": {
     "transactionId": {
-      "type": "string"
+      "type": "integer"
     },
     "userId": {
       "type": "integer"
     },
     "orderId": {
-      "type": "string"
+      "type": "integer"
     },
     "paymentInfo": {
       "type": "string"
