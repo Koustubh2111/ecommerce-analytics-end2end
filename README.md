@@ -42,8 +42,8 @@ e-commerce-analytics/
     * Requirements installed.
     ```bash
     pip install -r requirements.text
-    * Amazon S3 bucket
     ```
+    * Amazon S3 bucket
 
 ## TO DO
 
