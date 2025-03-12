@@ -1,15 +1,8 @@
-from confluent_kafka import Consumer, KafkaException, KafkaError
-from confluent_kafka.schema_registry import SchemaRegistryClient
-from confluent_kafka.schema_registry.json_schema import JSONDeserializer
-from confluent_kafka.serialization import SerializationContext, MessageField
-import json
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
 import boto3
 import os
 from dotenv import load_dotenv
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
-from io import BytesIO
 from schemas import schema
 
 # Load environment variables from .env file
@@ -21,98 +14,80 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = os.getenv('AWS_REGION')
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 
+# Kafka Configuration
+KAFKA_BROKER = 'localhost:9093'
+TOPICS = list(schema.keys())
 
-# Initialize Boto3 S3 client with credentials from .envpi
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    region_name=AWS_REGION
-)
+# Initialize Boto3 S3 client with credentials from .env
+try:
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        region_name=AWS_REGION
+    )
+    print(f"S3 Bucket '{S3_BUCKET_NAME}' connection successful.")
+except Exception as e:
+    print(f"Error connecting to S3: {e}")
+    exit(1) #Exit if S3 connection fails.
 
-# Schema Registry Configuration
-schema_registry_conf = {'url': 'http://localhost:8081'}
-schema_registry_client = SchemaRegistryClient(schema_registry_conf)
-
-# Kafka Consumer Configuration
-consumer_conf = {
-    'bootstrap.servers': 'localhost:9093',  # Internal connection to Kafka
-    'group.id': 'ecommerce-consumer-group',  # Consumer group ID
-    'auto.offset.reset': 'earliest'  # Start consuming from the beginning of the topic
-}
-
-def json_to_parquet(json_data):
-    """Convert JSON to Parquet format"""
-    # Convert the JSON to a pandas DataFrame
-    df = pd.json_normalize(json_data)
-    
-    # Save DataFrame to a Parquet file in memory
-    parquet_buffer = BytesIO()
-    df.to_parquet(parquet_buffer, engine='pyarrow', index=False)
-    parquet_buffer.seek(0)  # Rewind to the beginning of the buffer
-    return parquet_buffer
-
-def upload_to_s3(parquet_data, s3_key):
-    """Upload Parquet data to S3 bucket."""
-    try:
-        s3_client.put_object(Body=parquet_data, Bucket=S3_BUCKET_NAME, Key=s3_key)
-        print(f"Data successfully uploaded to S3: {s3_key}")
-    except Exception as e:
-        print(f"Error uploading to S3: {e}")
+# Initialize the Spark session
+try:
+    spark = SparkSession.builder \
+        .appName("Kafka2s3") \
+        .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.4.1,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk:1.11.655") \
+        .config("spark.hadoop.fs.s3a.access.key", AWS_ACCESS_KEY_ID) \
+        .config("spark.hadoop.fs.s3a.secret.key", AWS_SECRET_ACCESS_KEY) \
+        .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com") \
+        .getOrCreate()
+except Exception as e:
+    print(f"Error initializing Spark: {e}")
+    exit(1) #Exit if Spark initialization fails.
 
 
+# Example: Check Spark session
+print(f'Spark version : {spark.version}')
 
+# Read Kafka stream with Spark Structured Streaming
+try:
+    df = spark.readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers", KAFKA_BROKER) \
+        .option("subscribe", ",".join(TOPICS)) \
+        .option("startingOffsets", "earliest") \
+        .load()
+    print(f"Kafka connection successful. Able to read from topic: {TOPICS[0]}")
+except Exception as e:
+    print(f"Error connecting to Kafka: {e}")
+    exit(1) #Exit if Kafka connection fails.
 
-def consume_messages(json_deserializer, consumer):
-    """Consume messages from Kafka and print them."""
-    try:
-        while True:
-            msg = consumer.poll(timeout=1.0)  # Poll for a message with 1-second timeout
-            
-            if msg is None:
-                # No message received within the timeout period
-                continue
-            if msg.error():
-                # Handle error if any
-                if msg.error().code() == KafkaError._PARTITION_EOF:
-                    print(f"End of partition reached: {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
-                else:
-                    print(f"Error: {msg.error()}")
-                continue
+# Convert Kafka binary value column to string
+df_string = df.selectExpr("CAST(value AS STRING) as json_value", "topic")
 
-            # Print the raw message value
-            print(f"Consumed message: {msg.value()}")
+# Write the processed data to S3 in Parquet format, per topic
+def write_to_s3(batch_df, batch_id):
+    """Better alternative to .format(parquet) and .option(path, "path")"""
+    print(f"write_to_s3 called with batch_id: {batch_id}")
+    for topic in TOPICS:
+        topic_df = batch_df.filter(col("topic") == topic)
+        print(f"topic_df count: {topic_df.count()}")
+        if not topic_df.rdd.isEmpty(): #Check if the topic has data.
             try:
-                # Try deserializing the message if possible (if JSON formatted)
-                serialization_context = SerializationContext(topic=msg.topic(), field=MessageField.VALUE)
-                message_value = json_deserializer(msg.value(), serialization_context)
-                if message_value is not None:
-                    print(f"Deserialized message: {message_value}")
-                    # Convert JSON message to Parquet and upload to S3
-                    parquet_data = json_to_parquet(message_value)
-                    s3_key = f"events/{msg.topic()}/{message_value['userId']}/{message_value['productId']}/{message_value['timestamp']}.parquet"
-                    upload_to_s3(parquet_data, s3_key)
-                else:
-                    print(f"Deserialization failed for message: {msg.value()}")
+                topic_df.write \
+                    .mode("append") \
+                    .parquet(f"s3a://{S3_BUCKET_NAME}/events/{topic}")
+                print(f"Batch {batch_id} written to S3 for topic: {topic}")
             except Exception as e:
-                print(f"Error deserializing message: {e}")
-                
-    except KeyboardInterrupt:
-        pass
-    finally:
-        consumer.close()
+                print(f"Error writing to S3 for topic {topic}: {e}")
 
-if __name__ == '__main__':
-  for topic, schema_str in schema.items():
+# Write the processed data to S3 in Parquet format
+query = df_string.writeStream \
+    .foreachBatch(write_to_s3) \
+    .option("checkpointLocation", f"s3a://{S3_BUCKET_NAME}/checkpoint") \
+    .trigger(processingTime="30 seconds") \
+    .start()
 
-    # Define the deserializer
-    json_deserializer = JSONDeserializer(schema_str=schema_str, schema_registry_client=schema_registry_client)
 
-    # Initialize the consumer
-    consumer = Consumer(consumer_conf)
-    consumer.subscribe([topic])
-
-    #Consume
-    consume_messages(json_deserializer, consumer)
-
+# Await termination
+query.awaitTermination()
 
