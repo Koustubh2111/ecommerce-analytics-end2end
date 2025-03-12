@@ -1,0 +1,78 @@
+
+services:
+  #Metadata and config management for kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - project-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | /usr/bin/nc -w 2 localhost 2181 | grep imok || /bin/true"]
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093" # External communication (localhost) for testing outside the docker
+      - "9999:9999" # JMX port for monitoring
+    environment:
+      KAFKA_BROKER_ID: 1 #Broker id, using only one broker
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 #Specifies way of connecting to zookeeper
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:9093 #Ways of connecting to Kafka, kafka: for internal docker connection, localhost for external
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_JMX_PORT: 9999
+      KAFKA_SCHEMA_REGISTRY_URL: "http://schema-registry:8081" # location of schema registry
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    networks:
+      - project-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server kafka:9092 > /dev/null"]
+      interval: 30s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  schema-registry:
+    #Data (JSON) schema validation, versioning and monitoring 
+    image: confluentinc/cp-schema-registry:latest
+    hostname: schema-registry
+    container_name: schema-registry
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+    depends_on:
+      - kafka
+    networks:
+      - project-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 30s  # Run the health check every 30 seconds
+      retries: 5     # Retry 3 times before considering the service unhealthy
+      start_period: 10s  # Wait 10 seconds before starting health checks
+      timeout: 5s  # Timeout after 5 seconds if the check is not completed
+
+networks:
+  project-network:
+    driver: bridge 
