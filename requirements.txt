@@ -7,3 +7,7 @@ requests==2.32.3
 referencing==0.36.2
 pyrsistent
 jsonschema
+pyarrow==19.0.1
+boto3
+dotenv
+pandas
