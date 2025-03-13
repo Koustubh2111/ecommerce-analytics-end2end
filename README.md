@@ -29,12 +29,13 @@ e-commerce-analytics/
     └── producers/
     │    ├── produce_add_to_cart.py   # Producer script for AddToCart events
     │    ├── produce_abandoned_cart.py 
-    │   ├── produce_product_catalog.py 
-    │   ├── produce_purchase.py 
-    │   └── produce_transaction.py
+    │    ├── produce_product_catalog.py 
+    │    ├── produce_purchase.py 
+    │    ├── produce_transaction.py
     │    └── start_producers.sh #bash script for running all producers
     └── consumers/
         ├── consume_data.py #Consumes data and loads parquet to S3 bucket
+        ├── schemas.py
 ```
 
 1.  **Prerequisites:**
